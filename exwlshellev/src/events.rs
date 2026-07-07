@@ -84,8 +84,10 @@ pub enum OutputOption {
     /// want to pass a [wl_output::WlOutput] to create a new layershell, you need to pass your
     /// connection to layershellev first
     Output(wl_output::WlOutput),
+
+    /// Let the compositor decide which output to use.
     #[default]
-    None,
+    Active,
 }
 
 /// layershell settings to create a new layershell surface
@@ -165,7 +167,7 @@ impl Default for NewLayerShellSettings {
             size: None,
             margin: Some((0, 0, 0, 0)),
             keyboard_interactivity: KeyboardInteractivity::OnDemand,
-            output_option: OutputOption::None,
+            output_option: OutputOption::Active,
             events_transparent: false,
             namespace: None,
         }
