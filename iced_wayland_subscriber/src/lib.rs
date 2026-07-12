@@ -61,7 +61,7 @@ pub struct OutputInfo {
     zxdg_output: ZxdgOutputV1,
     is_ready: bool,
     wl_output_done: bool,
-    zwl_output_done: bool,
+    zxdg_output_done: bool,
 }
 
 impl OutputInfo {
@@ -76,15 +76,23 @@ impl OutputInfo {
             logical_region: LogicalRegion::default(),
             is_ready: false,
             wl_output_done: false,
-            zwl_output_done: false,
+            zxdg_output_done: false,
         }
     }
     fn check_is_ready(&mut self) {
-        self.is_ready = self.wl_output_done && self.zwl_output_done
+        self.is_ready = self.wl_output_done
+            && (self.zxdg_output_done
+                || (!self.name.is_empty()
+                    && !self.description.is_empty()
+                    && self.logical_region.size
+                        != Size {
+                            width: 0,
+                            height: 0,
+                        }))
     }
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Size<T = i32> {
     pub width: T,
     pub height: T,
@@ -170,8 +178,9 @@ impl Dispatch<zxdg_output_v1::ZxdgOutputV1, ()> for SubscribeState {
             zxdg_output_v1::Event::LogicalPosition { x, y } => {
                 pending.logical_region.position = Position { x, y };
             }
+            // FIXME: sway seems won't send done event to me
             zxdg_output_v1::Event::Done => {
-                pending.zwl_output_done = true;
+                pending.zxdg_output_done = true;
             }
             _ => {}
         }
