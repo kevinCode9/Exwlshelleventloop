@@ -5,13 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-06-07
+## [0.19.0] - 2026-07-12
 ### Changed (breaking)
 - Feat: `IcedNewPopupSettings`/`NewPopUpSettings` take explicit parent surface plus full xdg_positioner controls (`anchor_rect`, `anchor`, `gravity`, `constraint_adjustment`) instead of a single `position`.
-- Popups now positioned by the compositor relative to their parent surface, auto-flip/slide near screen edges, can be nested, and are dismissed via an xdg_popup grab. 
+- Popups now positioned by the compositor relative to their parent surface, auto-flip/slide near screen edges, can be nested, and are dismissed via an xdg_popup grab.
+- Removed None options in layershellev and replaced it with Active, fix the problem that original None option failed by @id3v1669
+- Share keymap conversion implementation and induce winit-core by @httpsworldview
+
+### Changed
+- Feat: record transform information in iced_wayland_subscriber
+- Removed the useless smol_str dependience
+- Fixed: lifecycle handling #386 by @httpsworldview
+- Refactor: share keymap conversion implementation by @krteke
+
+[0.19.0]: https://github.com/waycrate/exwlshelleventloop/compare/v0.19.0...v0.18.1
+
 ### Removed (breaking)
 - Removed `MenuDirection`, `IcedNewMenuSettings`, the `NewMenu` action, and `menu_open`. 
 - Removed the now-unused public getters `WindowState::mouse_position()` and `WindowManager::get_alias()`
+- Removed the option of None
 
 ## [0.18.1] - 2026-05-09
 - Fix: handle wl_pointer::Event::AxisValue120 for scrolling (#376) by @ibrahimduran
