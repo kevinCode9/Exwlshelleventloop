@@ -178,7 +178,7 @@ impl Dispatch<zxdg_output_v1::ZxdgOutputV1, ()> for SubscribeState {
             zxdg_output_v1::Event::LogicalPosition { x, y } => {
                 pending.logical_region.position = Position { x, y };
             }
-            // FIXME: sway seems won't send done event to me
+            // NOTE: the done is deprecated.
             zxdg_output_v1::Event::Done => {
                 pending.zxdg_output_done = true;
             }
