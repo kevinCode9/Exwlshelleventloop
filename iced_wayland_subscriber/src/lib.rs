@@ -92,8 +92,8 @@ pub struct Size<T = i32> {
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct LogicalRegion<T = i32> {
-    position: Position<T>,
-    size: Size<T>,
+    pub position: Position<T>,
+    pub size: Size<T>,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
