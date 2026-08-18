@@ -1,10 +1,10 @@
 use iced::widget::{Space, button, column, text, text_input};
 use iced::{Alignment, Element, Event, Length, Task as Command, event};
-use iced_sessionlock::actions::UnLockAction;
-use iced_sessionlock::application;
+use iced_exwlshell::sessionlock::application;
+use iced_exwlshell::to_sessionlock_message;
 
-pub fn main() -> Result<(), iced_sessionlock::Error> {
-    application(Counter::new, Counter::update, Counter::view)
+pub fn main() -> Result<(), iced_exwlshell::Error> {
+    application(Counter::new, "lock", Counter::update, Counter::view)
         .subscription(Counter::subscription)
         .run()
 }
@@ -14,6 +14,7 @@ struct Counter {
     text: String,
 }
 
+#[to_sessionlock_message]
 #[derive(Debug, Clone)]
 enum Message {
     IncrementPressed,
@@ -21,16 +22,6 @@ enum Message {
     TextInput(String),
     IcedEvent(Event),
     UnLock,
-}
-
-impl TryInto<UnLockAction> for Message {
-    type Error = Self;
-    fn try_into(self) -> Result<UnLockAction, Self::Error> {
-        if let Self::UnLock = self {
-            return Ok(UnLockAction);
-        }
-        Err(self)
-    }
 }
 
 impl Counter {
@@ -63,11 +54,11 @@ impl Counter {
                 self.text = text;
                 Command::none()
             }
-            _ => unreachable!(),
+            Message::UnLock => iced::exit(),
         }
     }
 
-    fn view(&self, _id: iced::window::Id) -> Element<'_, Message> {
+    fn view(&self) -> Element<'_, Message> {
         column![
             Space::new().height(Length::Fill),
             button("Increment").on_press(Message::IncrementPressed),
