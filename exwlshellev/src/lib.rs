@@ -621,7 +621,7 @@ impl<T> WindowStateUnit<T> {
         // (-1, -1) unsets the destination
         if (width, height) != (-1, -1) && (width <= 0 || height <= 0) {
             log::warn!(
-                target: "layershellev",
+                target: "exwlshellev",
                 "ignoring viewport destination {width}x{height} for {:?}: wp_viewport requires \
                  positive dimensions, or (-1, -1) to unset",
                 self.id
@@ -1598,7 +1598,7 @@ impl<T> WindowState<T> {
         self
     }
 
-    /// set layershellev to use display_handle
+    /// set exwlshellev to use display_handle
     pub fn with_use_display_handle(mut self, use_display_handle: bool) -> Self {
         self.use_display_handle = use_display_handle;
         self
@@ -2148,7 +2148,7 @@ impl<T> Dispatch<WlSurface, ()> for WindowState<T> {
             return;
         };
         if !state.outputs.contains(output) {
-            log::trace!(target: "layershellev", "ignoring {event:?} for an output this loop did not bind");
+            log::trace!(target: "exwlshellev", "ignoring {event:?} for an output this loop did not bind");
             return;
         }
 
@@ -2728,7 +2728,6 @@ impl<T: 'static> WindowState<T> {
         let wmbase = self.wmbase.take().unwrap();
         let viewporter = self.viewporter.take();
         let zxdg_decoration_manager = self.xdg_decoration_manager.take();
-        let lock_manager = self.lock_manager.take();
 
         let cursor_update_context = CursorUpdateContext {
             cursor_manager,
@@ -2761,12 +2760,22 @@ impl<T: 'static> WindowState<T> {
             }
         }
 
-        struct EventWrapper<Raw, F> {
-            raw: Raw,
+        struct EventWrapper<T, F> {
+            raw: WindowState<T>,
             fun: F,
             loop_handle: LoopHandle<'static, Self>,
-            lock_manager: Option<ExtSessionLockManagerV1>,
             lock: LockLifecycle,
+        }
+
+        impl<T, F> Drop for EventWrapper<T, F> {
+            fn drop(&mut self) {
+                if let Some(lock) = self.raw.lock_manager.take() {
+                    lock.destroy();
+                }
+                if let Some(layer_shell) = self.raw.layer_shell.take() {
+                    layer_shell.destroy();
+                }
+            }
         }
 
         enum LockTeardown {
@@ -2803,7 +2812,7 @@ impl<T: 'static> WindowState<T> {
         let mut event_loop: EventLoop<_> =
             EventLoop::try_new().expect("Failed to initialize the event loop");
 
-        let event_queue = connection.new_event_queue::<EventWrapper<Self, F>>();
+        let event_queue = connection.new_event_queue::<EventWrapper<T, F>>();
         WaylandSource::new(connection.clone(), event_queue)
             .insert(event_loop.handle())
             .expect("Failed to init wayland source");
@@ -2811,14 +2820,12 @@ impl<T: 'static> WindowState<T> {
             raw: self,
             fun: event_handler,
             loop_handle: event_loop.handle(),
-            lock_manager,
             lock: LockLifecycle::Unlocked,
         };
         let signal = event_loop.get_signal();
 
         let process_window_state = |window_state: &mut WindowState<T>,
                                     event_handler: &mut F,
-                                    lock_manager: Option<&ExtSessionLockManagerV1>,
                                     lock: &mut LockLifecycle| {
             let mut messages = Vec::new();
             std::mem::swap(&mut messages, &mut window_state.message);
@@ -3054,7 +3061,7 @@ impl<T: 'static> WindowState<T> {
                                 );
                                 continue;
                             }
-                            let Some(lock_manager) = lock_manager else {
+                            let Some(lock_manager) = window_state.lock_manager.as_ref() else {
                                 log::error!("SessionLock is not supported");
                                 window_state.handle_event(
                                     &mut *event_handler,
@@ -3637,11 +3644,10 @@ impl<T: 'static> WindowState<T> {
 
             let r_window_state = &mut state;
             let window_state = &mut r_window_state.raw;
-            let lock_manager = &r_window_state.lock_manager;
             let lock = &mut r_window_state.lock;
             event_queue_origin.dispatch_pending(window_state)?;
             let event_handler = &mut r_window_state.fun;
-            if process_window_state(window_state, event_handler, lock_manager.as_ref(), lock) {
+            if process_window_state(window_state, event_handler, lock) {
                 break;
             }
             let looph = &r_window_state.loop_handle;
