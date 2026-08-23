@@ -454,6 +454,7 @@ impl<T> WindowStateUnitBuilder<T> {
                 scale: 120,
                 request_flag: Default::default(),
                 present_available_state: Default::default(),
+                frame_callback: None,
             },
         }
     }
@@ -566,12 +567,20 @@ pub struct WindowStateUnit<T> {
     scale: u32,
     request_flag: WindowStateUnitRequestFlag,
     present_available_state: PresentAvailableState,
+    frame_callback: Option<WlCallback>,
 }
 
 /// wayland-rs sends nothing on drop.
 /// A destructor request has to be issued, so every object the unit owns is released.
 impl<T> Drop for WindowStateUnit<T> {
     fn drop(&mut self) {
+        // wl_callback has no destructor request, so something like
+        // this needs to be done
+        if let Some(callback) = self.frame_callback.take()
+            && let Some(backend) = callback.backend().upgrade()
+        {
+            let _ = backend.destroy_object(&callback.id());
+        }
         self.shell.destroy();
         if let Some(buffer) = &self.buffer {
             buffer.destroy();
@@ -958,9 +967,11 @@ impl<T: 'static> WindowStateUnit<T> {
         match self.present_available_state {
             PresentAvailableState::Taken => {
                 self.present_available_state = PresentAvailableState::Requested;
-                self.window
-                    .wl_surface
-                    .frame(&self.qh, (self.id, PresentAvailableState::Available));
+                self.frame_callback = Some(
+                    self.window
+                        .wl_surface
+                        .frame(&self.qh, (self.id, PresentAvailableState::Available)),
+                );
             }
             PresentAvailableState::Requested | PresentAvailableState::Available => {}
         }
@@ -1044,12 +1055,17 @@ pub struct WindowState<T> {
     connection: Option<Connection>,
     event_queue: Option<EventQueue<WindowState<T>>>,
     wl_compositor: Option<WlCompositor>,
-    wmbase: Option<XdgWmBase>,
     background_effect_manager: Option<ExtBackgroundEffectManagerV1>,
     shm: Option<WlShm>,
     cursor_manager: Option<WpCursorShapeManagerV1>,
     viewporter: Option<WpViewporter>,
     lock_manager: Option<ExtSessionLockManagerV1>,
+
+    // The shells used to create surfaces
+    wmbase: Option<XdgWmBase>,
+    layer_shell: Option<ZwlrLayerShellV1>,
+    input_panel: Option<ZwpInputPanelV1>,
+
     fractional_scale_manager: Option<WpFractionalScaleManagerV1>,
     globals: Option<GlobalList>,
 
@@ -1616,6 +1632,8 @@ impl<T> Default for WindowState<T> {
             background_effect_manager: None,
             cursor_manager: None,
             lock_manager: None,
+            layer_shell: None,
+            input_panel: None,
             viewporter: None,
             globals: None,
             fractional_scale_manager: None,
@@ -2338,6 +2356,7 @@ impl<T> Dispatch<WlCallback, (id::Id, PresentAvailableState)> for WindowState<T>
         if let WlCallbackEvent::Done { callback_data: _ } = event
             && let Some(unit) = state.get_mut_unit_with_id(data.0)
         {
+            unit.frame_callback = None;
             unit.present_available_state = data.1;
         }
     }
@@ -2467,9 +2486,13 @@ impl<T: 'static> WindowState<T> {
         let text_input_manager = globals
             .bind::<ZwpTextInputManagerV3, _, _>(&qh, 1..=1, ())
             .ok();
+
         let lock_manager = globals
             .bind::<ExtSessionLockManagerV1, _, _>(&qh, 1..=1, ())
             .ok();
+        let layer_shell = globals.bind::<ZwlrLayerShellV1, _, _>(&qh, 3..=4, ()).ok();
+        let input_panel = globals.bind::<ZwpInputPanelV1, _, _>(&qh, 1..=1, ()).ok();
+
         self.text_input_manager = text_input_manager;
         event_queue.blocking_dispatch(&mut self)?; // then make a dispatch
 
@@ -2497,10 +2520,8 @@ impl<T: 'static> WindowState<T> {
             };
 
             let wl_surface = wmcompositer.create_surface(&qh, ()); // and create a surface. if two or more,
-            let layer_shell = globals
-                .bind::<ZwlrLayerShellV1, _, _>(&qh, 3..=4, ())
-                .expect("We need the layershell here");
-            let layer = layer_shell.get_layer_surface(
+            let layer_shell_ref = layer_shell.as_ref().expect("We need layershell here");
+            let layer = layer_shell_ref.get_layer_surface(
                 &wl_surface,
                 binded_output.as_ref(),
                 self.layer,
@@ -2566,12 +2587,12 @@ impl<T: 'static> WindowState<T> {
             );
         } else {
             let displays = self.outputs.clone();
+
+            let layer_shell_ref = layer_shell.as_ref().expect("We need layershell here");
             for output_display in displays.iter() {
                 let wl_surface = wmcompositer.create_surface(&qh, ()); // and create a surface. if two or more,
-                let layer_shell = globals
-                    .bind::<ZwlrLayerShellV1, _, _>(&qh, 3..=4, ())
-                    .expect("We need the layershell here");
-                let layer = layer_shell.get_layer_surface(
+
+                let layer = layer_shell_ref.get_layer_surface(
                     &wl_surface,
                     Some(output_display),
                     self.layer,
@@ -2647,6 +2668,8 @@ impl<T: 'static> WindowState<T> {
         self.fractional_scale_manager = fractional_scale_manager;
         self.cursor_manager = cursor_manager;
         self.lock_manager = lock_manager;
+        self.layer_shell = layer_shell;
+        self.input_panel = input_panel;
         self.connection = Some(connection);
 
         Ok(self)
@@ -2851,9 +2874,10 @@ impl<T: 'static> WindowState<T> {
                             continue;
                         }
                         let wl_surface = wmcompositer.create_surface(&qh, ());
-                        let layer_shell = globals
-                            .bind::<ZwlrLayerShellV1, _, _>(&qh, 3..=4, ())
-                            .expect("We need the layershell here");
+                        let layer_shell = window_state
+                            .layer_shell
+                            .as_ref()
+                            .expect("We need layershell here");
                         let layer = layer_shell.get_layer_surface(
                             &wl_surface,
                             Some(output_display),
@@ -3132,9 +3156,11 @@ impl<T: 'static> WindowState<T> {
                             let output = window_state.resolve_output(output_type);
 
                             let wl_surface = wmcompositer.create_surface(&qh, ());
-                            let layer_shell = globals
-                                .bind::<ZwlrLayerShellV1, _, _>(&qh, 3..=4, ())
-                                .unwrap();
+
+                            let layer_shell = window_state
+                                .layer_shell
+                                .as_ref()
+                                .expect("We need layershell here");
                             let layer = layer_shell.get_layer_surface(
                                 &wl_surface,
                                 output.as_ref(),
@@ -3421,9 +3447,10 @@ impl<T: 'static> WindowState<T> {
                             };
 
                             let wl_surface = wmcompositer.create_surface(&qh, ());
-                            let input_panel = globals
-                                .bind::<ZwpInputPanelV1, _, _>(&qh, 1..=1, ())
-                                .unwrap();
+                            let input_panel = window_state
+                                .input_panel
+                                .as_ref()
+                                .expect("This request needs input_panel support");
                             let input_panel_surface =
                                 input_panel.get_input_panel_surface(&wl_surface, &qh, ());
                             if keyboard {
