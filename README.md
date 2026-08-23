@@ -14,51 +14,17 @@ And we also support popup in these shells, but since the popup/tooltip support h
 
 Always welcome pr and issues!
 
-## Here are seven subprojects
+## Here are four main subprojects
 
 ### waycrate_xkbkeycode
 [![Crates.io](https://img.shields.io/crates/v/waycrate_xkbkeycode.svg)](https://crates.io/crates/waycrate_xkbkeycode)
 
 Take a lot of reference from winit (mainly from winit). Mainly handle the xkbcommon events.
 
-### layershellev
-[![Crates.io](https://img.shields.io/crates/v/layershellev.svg)](https://crates.io/crates/layershellev)
-
-Winit like layershell event crate.
-
-### sessionlockev
-[![Crates.io](https://img.shields.io/crates/v/sessionlockev.svg)](https://crates.io/crates/sessionlockev)
-
-Winit like sessionlock event crate. It handles the sessionlock event, like lock and unlock, and provides base sessionlock support for iced_sessionlock
-
 ### exwlshellev
 [![Crates.io](https://img.shields.io/crates/v/exwlshellev.svg)](https://crates.io/crates/exwlshellev)
 
-All extra wayland shell in one eventloop. This libraries provides full extra shell support for iced_exwlshell
-
-### iced_layershell
-[![Crates.io](https://img.shields.io/crates/v/iced_layershell.svg)](https://crates.io/crates/iced_layershell)
-
-Layershell binding for iced
-
-#### Feature:
-
-- support to open new layershell and support popup window.
-- support ext-virtual-keyboard
-
-![example](./misc/iced_layershell_example.png)
-
-![Bottom Panel Example](./misc/bottom_panel.png)
-
-With this crate, you can use iced to build your kde-shell, notification application, and etc.
-
-### iced_sessionlock
-[![Crates.io](https://img.shields.io/crates/v/iced_sessionlock.svg)](https://crates.io/crates/iced_sessionlock)
-
-Sessionlock binding for iced
-
-Session lock is the wayland protocol for lock. This protocol is supported in river, sway and etc. We use it make a beautiful lock program in [twenty](https://github.com/waycrate/twenty). You can also use it to build your sessionlock. This will become very easy to use our crate with pam crate.
-
+All wayland extra shell in one eventloop. It contains layershell, sessionlock and input-panel. This libraries provides full extra shell support for iced_exwlshell
 
 ### iced_exwlshell
 [![Crates.io](https://img.shields.io/crates/v/iced_exwlshell.svg)](https://crates.io/crates/iced_exwlshell)
@@ -66,3 +32,18 @@ Session lock is the wayland protocol for lock. This protocol is supported in riv
 Full extra shell binding for iced
 
 Now you can use this crate to make a shell probram, including lock, dock, and etc
+
+#### Feature:
+
+- support to open new layershell and support popup window.
+- support ext-virtual-keyboard
+- support sessionlock
+
+### iced_wayland_subscriber
+[![Crates.io](https://img.shields.io/crates/v/iced_wayland_subscriber.svg)](https://crates.io/crates/iced_wayland_subscriber)
+
+This crate provides subscriptions for many wayland events, like ext-workspace, outputs and etc. You can use this crate to listen on wayland events.
+
+## NOTE
+
+From version 0.20.0, iced_layershell and iced_sessionlock will be deprecated. The related functions and macros are moved to iced_exwlshell. Please read the guidance under `docs` folder.
