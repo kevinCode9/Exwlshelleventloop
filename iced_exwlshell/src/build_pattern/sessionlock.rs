@@ -13,6 +13,7 @@ mod pattern {
     use crate::actions::ExwlShellCustomActionWithId;
 
     use crate::DefaultStyle;
+    use crate::redraw::Policy;
     use crate::settings::LayerShellSettings;
 
     use crate::Result;
@@ -407,6 +408,7 @@ mod pattern {
                 renderer_settings,
                 true,
                 None,
+                Policy::default(),
             )
         }
 

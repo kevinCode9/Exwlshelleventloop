@@ -7,6 +7,7 @@ use iced_runtime::Task;
 use crate::actions::ExwlShellCustomActionWithId;
 
 use crate::DefaultStyle;
+use crate::redraw::{Policy, Scope};
 use crate::settings::LayerShellSettings;
 
 use crate::Result;
@@ -150,6 +151,7 @@ pub struct Daemon<A: Program> {
     settings: Settings,
     namespace: String,
     on_new_shell: Option<crate::NewShellHook<A::Message>>,
+    redraw_policy: Policy<A::Message>,
 }
 
 pub fn daemon<State, Message, Theme, Renderer>(
@@ -237,6 +239,7 @@ where
         settings: Settings::default(),
         namespace: namespace.namespace(),
         on_new_shell: None,
+        redraw_policy: Policy::default(),
     }
 }
 
@@ -667,9 +670,10 @@ impl<P: Program> Daemon<P> {
     {
         let settings = self.settings;
         let on_new_shell = self.on_new_shell;
+        let redraw_policy = self.redraw_policy;
 
         #[cfg(all(feature = "debug", not(target_arch = "wasm32")))]
-        let (program, on_new_shell) = {
+        let (program, on_new_shell, redraw_policy) = {
             iced_debug::init(iced_debug::Metadata {
                 name: P::name(),
                 theme: None,
@@ -680,11 +684,20 @@ impl<P: Program> Daemon<P> {
                 Box::new(move |info| f(info).map(iced_exdevtools::Event::Program))
                     as Box<dyn Fn(ShellInfo) -> Option<_>>
             });
-            (super::attach(self.raw), hook)
+            (
+                super::attach(self.raw),
+                hook,
+                redraw_policy.for_wrapped_messages(
+                    |event: &iced_exdevtools::Event<P>| match event {
+                        iced_exdevtools::Event::Program(message) => Some(message),
+                        _ => None,
+                    },
+                ),
+            )
         };
 
         #[cfg(any(not(feature = "debug"), target_arch = "wasm32"))]
-        let program = self.raw;
+        let (program, redraw_policy) = (self.raw, redraw_policy);
         let renderer_settings = iced_graphics::Settings {
             default_font: settings.default_font,
             default_text_size: settings.default_text_size,
@@ -702,6 +715,7 @@ impl<P: Program> Daemon<P> {
             renderer_settings,
             false,
             on_new_shell,
+            redraw_policy,
         )
     }
 
@@ -772,6 +786,7 @@ impl<P: Program> Daemon<P> {
             settings: self.settings,
             namespace: self.namespace,
             on_new_shell: self.on_new_shell,
+            redraw_policy: self.redraw_policy,
         }
     }
     /// Sets the subscription logic of the [`Daemon`].
@@ -784,6 +799,7 @@ impl<P: Program> Daemon<P> {
             settings: self.settings,
             namespace: self.namespace,
             on_new_shell: self.on_new_shell,
+            redraw_policy: self.redraw_policy,
         }
     }
 
@@ -797,6 +813,7 @@ impl<P: Program> Daemon<P> {
             settings: self.settings,
             namespace: self.namespace,
             on_new_shell: self.on_new_shell,
+            redraw_policy: self.redraw_policy,
         }
     }
 
@@ -819,6 +836,7 @@ impl<P: Program> Daemon<P> {
             settings: self.settings,
             namespace: self.namespace,
             on_new_shell: self.on_new_shell,
+            redraw_policy: self.redraw_policy,
         }
     }
 
@@ -832,6 +850,7 @@ impl<P: Program> Daemon<P> {
             settings: self.settings,
             namespace: self.namespace,
             on_new_shell: self.on_new_shell,
+            redraw_policy: self.redraw_policy,
         }
     }
     /// Sets the executor of the [`Daemon`].
@@ -846,6 +865,15 @@ impl<P: Program> Daemon<P> {
             settings: self.settings,
             namespace: self.namespace,
             on_new_shell: self.on_new_shell,
+            redraw_policy: self.redraw_policy,
         }
+    }
+
+    /// Sets the redraw scope of the [`Daemon`].
+    ///
+    /// Messages redraw all surfaces unless this method is called.
+    pub fn redraw_scope(mut self, scope: impl Fn(&P::Message) -> Scope + 'static) -> Self {
+        self.redraw_policy = Policy::new(scope);
+        self
     }
 }

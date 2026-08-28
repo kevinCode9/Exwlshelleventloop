@@ -4,6 +4,7 @@ use iced::widget::{button, column, container, row, text, text_input};
 use iced::window::Id;
 use iced::{Alignment, Element, Event, Length, Task as Command, event};
 use iced_exwlshell::actions::{IcedNewMenuSettings, IcedNewPopupSettings, IcedXdgWindowSettings};
+use iced_exwlshell::redraw::Scope;
 use iced_runtime::window::Action as WindowAction;
 use iced_runtime::{Action, task};
 
@@ -43,6 +44,7 @@ pub fn main() -> Result<(), iced_exwlshell::Error> {
         shell_broadcast,
         ..Default::default()
     })
+    .redraw_scope(redraw_scope)
     .run()
 }
 
@@ -83,8 +85,8 @@ enum WayEvent {
 #[to_layer_message(multi)]
 #[derive(Debug, Clone)]
 enum Message {
-    IncrementPressed,
-    DecrementPressed,
+    IncrementPressed(Id),
+    DecrementPressed(Id),
     NewWindowLeft,
     NewNormalWindow,
     Close(Id),
@@ -216,11 +218,11 @@ impl Counter {
                     id,
                 })
             }
-            Message::IncrementPressed => {
+            Message::IncrementPressed(_) => {
                 self.value += 1;
                 Command::none()
             }
-            Message::DecrementPressed => {
+            Message::DecrementPressed(_) => {
                 self.value -= 1;
                 Command::none()
             }
@@ -326,8 +328,8 @@ impl Counter {
             .into();
         }
         let center = column![
-            button("Increment").on_press(Message::IncrementPressed),
-            button("Decrement").on_press(Message::DecrementPressed),
+            button("Increment").on_press(Message::IncrementPressed(id)),
+            button("Decrement").on_press(Message::DecrementPressed(id)),
             text(self.value).size(50),
             button("newwindowLeft").on_press(Message::NewWindowLeft),
             button("new normal window").on_press(Message::NewNormalWindow),
@@ -362,5 +364,18 @@ impl Counter {
         .width(Length::Fill)
         .height(Length::Fill)
         .into()
+    }
+}
+
+fn redraw_scope(message: &Message) -> Scope {
+    match message {
+        Message::IncrementPressed(id) | Message::DecrementPressed(id) => Scope::Window(*id),
+        Message::Direction(d) => match d {
+            WindowDirection::Bottom(id)
+            | WindowDirection::Top(id)
+            | WindowDirection::Left(id)
+            | WindowDirection::Right(id) => Scope::Window(*id),
+        },
+        _ => Scope::All,
     }
 }
