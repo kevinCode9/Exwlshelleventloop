@@ -5,11 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.20.0] - 2026-08-29
 ### Migration
 Current update is hudge, so [Migration Guide is provided](https://github.com/waycrate/exwlshelleventloop/docs/MIGRATION-19.1->20.0.md)
 
 ### Changed (breaking)
+- Feat: add configurable redraw policy to iced_exwlshell (#421)
 - Feat: track outputs with sctk's `OutputState` instead of manual `zxdg_output_v1` handling, removed `XdgInfoChanged` event, `XdgInfoChangedType`, `ZxdgOutputInfo` and `get_xdgoutput_info`
 - Feat: new `DispatchMessage::OutputChanged` event sent when surface enters another output or its output info changes
 - Feat: rework iced_wayland_subscriber: `listen()`/`WaylandEvent` replaced by `output::listen()` and the `shell::channel()` broadcast
@@ -22,6 +23,8 @@ Current update is hudge, so [Migration Guide is provided](https://github.com/way
 - Feat: support ext-background-effect-v1 blur via `BlurOption`
 - Feat: xdg_popup reposition via `PopUpRepositionSettings`
 - Feat: add opt-in `Settings::keep_compositor_alive` keeping the compositor alive when the last surface closes toreduce next "first" surface spawn
+
+[0.20.0]: https://github.com/waycrate/exwlshelleventloop/compare/v0.20.0...v0.19.1
 
 ## [0.19.1] - 2026-07-12
 ### Changed
