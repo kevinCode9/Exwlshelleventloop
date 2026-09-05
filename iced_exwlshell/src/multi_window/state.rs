@@ -234,12 +234,17 @@ fn viewport(
     wayland_scale_factor: f64,
     application_scale_factor: f64,
 ) -> Viewport {
-    let factor = wayland_scale_factor * application_scale_factor;
     let physical_size = Size::new(
         (window_size.width as f64 * wayland_scale_factor).ceil() as u32,
         (window_size.height as f64 * wayland_scale_factor).ceil() as u32,
     );
-    Viewport::with_physical_size(physical_size, factor as f32)
+    Viewport::with_physical_size(
+        physical_size,
+        iced_core::renderer::Scale {
+            window: wayland_scale_factor as f32,
+            application: application_scale_factor as f32,
+        },
+    )
 }
 
 fn set_wpviewport_destination(wpviewport: &WpViewport, window_size: Size<u32>) {

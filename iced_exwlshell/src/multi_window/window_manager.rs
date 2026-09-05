@@ -9,10 +9,13 @@ use iced_core::InputMethod;
 use iced_core::input_method;
 use iced_graphics::Compositor;
 
+use crate::proxy::IcedProxy;
 use iced_core::mouse;
 use iced_core::window::Id as IcedId;
+use iced_core::{renderer, shell};
 use iced_program::Instance;
 use iced_program::Program;
+use iced_runtime::Action;
 
 pub struct Window<P, C>
 where
@@ -20,6 +23,8 @@ where
     C: Compositor<Renderer = P::Renderer>,
     P::Theme: DefaultStyle,
 {
+    pub raw: Arc<WindowWrapper>,
+    pub waker: shell::Waker,
     pub id: LayerId,
     #[allow(unused)]
     pub iced_id: IcedId,
@@ -86,19 +91,32 @@ where
         window: Arc<WindowWrapper>,
         application: &Instance<P>,
         compositor: &mut C,
+        renderer_settings: renderer::Settings,
+        proxy: IcedProxy<Action<P::Message>>,
         system_theme: iced_core::theme::Mode,
     ) -> &mut Window<P, C> {
         let layerid = window.id();
         let state = State::new(id, application, size, fractal_scale, &window, system_theme);
         let physical_size = state.viewport().physical_size();
-        let surface = compositor.create_surface(window, physical_size.width, physical_size.height);
-        let renderer = compositor.create_renderer();
+        let surface =
+            compositor.create_surface(window.clone(), physical_size.width, physical_size.height);
+        let mut renderer = compositor.create_renderer(renderer_settings);
+        iced_core::Renderer::hint(&mut renderer, state.viewport().scale());
+        let waker_proxy = proxy.clone();
+        let waker = shell::Waker::new(move || {
+            waker_proxy.send_action(Action::Event {
+                window: id,
+                event: iced_core::Event::Waken,
+            });
+        });
         let _ = self.aliases.insert(layerid, id);
         let _ = self.back_aliases.insert(id, layerid);
 
         let _ = self.entries.insert(
             id,
             Window {
+                raw: window,
+                waker,
                 id: layerid,
                 iced_id: id,
                 renderer,
@@ -120,6 +138,13 @@ where
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (IcedId, &mut Window<P, C>)> {
         self.entries.iter_mut().map(|(k, v)| (*k, v))
+    }
+
+    pub fn replace_with(&mut self, mut f: impl FnMut(Window<P, C>) -> Window<P, C>) {
+        self.entries = std::mem::take(&mut self.entries)
+            .into_iter()
+            .map(|(id, window)| (id, f(window)))
+            .collect();
     }
 
     pub fn first_window(&self) -> Option<(&IcedId, &Window<P, C>)> {

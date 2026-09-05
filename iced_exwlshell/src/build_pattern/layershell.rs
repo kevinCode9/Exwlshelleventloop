@@ -388,17 +388,6 @@ mod pattern {
             #[cfg(any(not(feature = "debug"), target_arch = "wasm32"))]
             let program = self.raw;
 
-            #[allow(clippy::needless_update)]
-            let renderer_settings = iced_graphics::Settings {
-                default_font: settings.default_font,
-                default_text_size: settings.default_text_size,
-                antialiasing: if settings.antialiasing {
-                    Some(iced_graphics::Antialiasing::MSAAx4)
-                } else {
-                    None
-                },
-                ..iced_graphics::Settings::default()
-            };
             use exwlshellev::StartMode;
             if matches!(
                 settings.layer_settings.start_mode,
@@ -412,7 +401,6 @@ mod pattern {
                 program,
                 &self.namespace,
                 settings,
-                renderer_settings,
                 false,
                 None,
                 Policy::default(),

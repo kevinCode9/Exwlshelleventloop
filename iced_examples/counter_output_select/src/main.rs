@@ -152,6 +152,6 @@ fn style(_counter: &Counter, theme: &iced::Theme) -> iced::theme::Style {
     use iced::theme::Style;
     Style {
         background_color: Color::TRANSPARENT,
-        text_color: theme.palette().text,
+        text_color: theme.palette().background.base.text,
     }
 }

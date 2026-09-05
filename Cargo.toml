@@ -58,16 +58,16 @@ calloop-wayland-source = "0.4.1"
 
 rwh_06 = { package = "raw-window-handle", version = "0.6", features = ["std"] }
 sctk = { package = "smithay-client-toolkit", version = "0.21.1" }
-iced = "0.14"
-iced_runtime = "0.14"
-iced_core = "0.14"
-iced_program = "0.14"
-iced_renderer = "0.14"
-iced_futures = "0.14"
-iced_graphics = "0.14"
-iced_debug = "0.14"
-iced_devtools = "0.14"
-iced_widget = "0.14"
+iced = "0.15.0-dev"
+iced_runtime = "0.15.0-dev"
+iced_core = "0.15.0-dev"
+iced_program = "0.15.0-dev"
+iced_renderer = "0.15.0-dev"
+iced_futures = "0.15.0-dev"
+iced_graphics = "0.15.0-dev"
+iced_debug = "0.15.0-dev"
+iced_devtools = "0.15.0-dev"
+iced_widget = "0.15.0-dev"
 window_clipboard = "0.5.1"
 
 log = "0.4"
@@ -86,3 +86,16 @@ manyhow = { version = "0.13.0", features = ["darling"] }
 proc-macro2 = "1.0.107"
 quote = "1.0.47"
 syn = { version = "3.0", features = ["full"] }
+
+
+[patch.crates-io]
+iced = { git = "https://github.com/acul009/iced.git" }
+iced_runtime = { git = "https://github.com/acul009/iced.git" }
+iced_core = { git = "https://github.com/acul009/iced.git" }
+iced_program = { git = "https://github.com/acul009/iced.git" }
+iced_renderer = { git = "https://github.com/acul009/iced.git" }
+iced_futures = { git = "https://github.com/acul009/iced.git" }
+iced_graphics = { git = "https://github.com/acul009/iced.git" }
+iced_debug = { git = "https://github.com/acul009/iced.git" }
+iced_devtools = { git = "https://github.com/acul009/iced.git" }
+iced_widget = { git = "https://github.com/acul009/iced.git" }

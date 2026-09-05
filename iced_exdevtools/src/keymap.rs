@@ -578,5 +578,6 @@ pub fn native_key_code(
         NativeKeyCode::MacOS(code) => keyboard::key::NativeCode::MacOS(code),
         NativeKeyCode::Windows(code) => keyboard::key::NativeCode::Windows(code),
         NativeKeyCode::Xkb(code) => keyboard::key::NativeCode::Xkb(code),
+        _ => keyboard::key::NativeCode::Unidentified,
     }
 }

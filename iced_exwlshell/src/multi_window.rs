@@ -62,6 +62,7 @@ enum PresentRecovery {
     Reconfigure,
     Recreate,
     Report,
+    Ignore,
     Fatal,
 }
 
@@ -72,6 +73,7 @@ fn present_recovery(error: &compositor::SurfaceError) -> PresentRecovery {
         compositor::SurfaceError::Timeout | compositor::SurfaceError::Other => {
             PresentRecovery::Report
         }
+        compositor::SurfaceError::Occluded => PresentRecovery::Ignore,
         compositor::SurfaceError::OutOfMemory => PresentRecovery::Fatal,
     }
 }
@@ -81,7 +83,6 @@ pub fn run<P>(
     program: P,
     namespace: &str,
     settings: Settings,
-    compositor_settings: iced_graphics::Settings,
     lock: bool,
     on_new_shell: Option<crate::NewShellHook<P::Message>>,
     redraw_policy: Policy<P::Message>,
@@ -92,6 +93,15 @@ where
     P::Message: 'static + TryInto<ExwlShellCustomActionWithId, Error = P::Message>,
 {
     use exwlshellev::calloop::channel::channel;
+    let backend_settings = iced_core::backend::Settings {
+        antialiasing: settings.antialiasing,
+        ..Default::default()
+    };
+    let renderer_settings = iced_core::renderer::Settings {
+        default_font: settings.default_font,
+        default_text_size: settings.default_text_size,
+        ..Default::default()
+    };
     let (message_sender, message_receiver) = channel::<Action<P::Message>>();
 
     let boot_span = iced_debug::boot();
@@ -176,7 +186,8 @@ where
         <P::Renderer as iced_graphics::compositor::Default>::Compositor,
     >::new(
         application,
-        compositor_settings,
+        backend_settings,
+        renderer_settings,
         runtime,
         on_new_shell,
         settings.shell_broadcast,
@@ -285,7 +296,8 @@ where
     P::Theme: DefaultStyle,
     P::Message: 'static,
 {
-    compositor_settings: iced_graphics::Settings,
+    backend_settings: iced_core::backend::Settings,
+    renderer_settings: iced_core::renderer::Settings,
     runtime: MultiRuntime<E, P::Message>,
     on_new_shell: Option<crate::NewShellHook<P::Message>>,
     shell_broadcast: shell::ShellSender,
@@ -317,7 +329,8 @@ where
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         application: Instance<P>,
-        compositor_settings: iced_graphics::Settings,
+        backend_settings: iced_core::backend::Settings,
+        renderer_settings: iced_core::renderer::Settings,
         runtime: MultiRuntime<E, P::Message>,
         on_new_shell: Option<crate::NewShellHook<P::Message>>,
         shell_broadcast: shell::ShellSender,
@@ -330,7 +343,8 @@ where
         Self {
             on_new_shell,
             shell_broadcast,
-            compositor_settings,
+            backend_settings,
+            renderer_settings,
             runtime,
             system_theme,
             fonts,
@@ -362,7 +376,12 @@ where
     /// before the first frame can render. Copies iced_winit logic.
     fn create_compositor(&mut self, window: Arc<WindowWrapper>, display: DisplayWrapper) {
         let shell = Shell::new(self.proxy.clone());
-        let compositor_future = C::new(self.compositor_settings, display, window.clone(), shell);
+        let compositor_future = C::new(
+            self.backend_settings.clone(),
+            display,
+            window.clone(),
+            shell,
+        );
         let mut new_compositor =
             futures::executor::block_on(compositor_future).expect("Cannot create compositor");
         for font in self.fonts.clone() {
@@ -453,125 +472,134 @@ where
         // events may not be handled after RequestRefreshWithWrapper in the same
         // interaction, we dispatched them immediately.
         let mut events = Vec::new();
-        let (iced_id, window) =
-            if let Some((iced_id, window)) = self.window_manager.get_mut_alias(unit_id) {
-                let window_size = window.state.window_size();
+        let (iced_id, window) = if let Some((iced_id, window)) =
+            self.window_manager.get_mut_alias(unit_id)
+        {
+            let window_size = window.state.window_size();
 
-                if window_size.width != width
-                    || window_size.height != height
-                    || window.state.wayland_scale_factor() != scale_float
-                {
-                    let layout_span = iced_debug::layout(iced_id);
-                    window.state.update_view_port(width, height, scale_float);
-                    if let Some(ui) = self.user_interfaces.ui_mut(&iced_id) {
-                        ui.relayout(window.state.viewport().logical_size(), &mut window.renderer);
-                    }
-                    layout_span.finish();
-                    events.push(IcedEvent::Window(IcedWindowEvent::Resized(
-                        window.state.window_size_f32(),
-                    )));
+            if window_size.width != width
+                || window_size.height != height
+                || window.state.wayland_scale_factor() != scale_float
+            {
+                let layout_span = iced_debug::layout(iced_id);
+                window.state.update_view_port(width, height, scale_float);
+                iced_core::Renderer::hint(&mut window.renderer, window.state.viewport().scale());
+                if let Some(ui) = self.user_interfaces.ui_mut(&iced_id) {
+                    ui.relayout(window.state.viewport().logical_size(), &mut window.renderer);
                 }
-                (iced_id, window)
-            } else {
-                let wrapper = ex_wlshell_window.gen_wrapper();
-                let iced_id = ex_wlshell_window
-                    .get_binding()
-                    .copied()
-                    .unwrap_or_else(IcedId::unique);
-                let shell_type = match ex_wlshell_window.wl_shell_type() {
-                    exwlshellev::WlShellType::LayerShell => shell::ShellType::LayerShell,
-                    exwlshellev::WlShellType::PopUp => shell::ShellType::PopUp,
-                    exwlshellev::WlShellType::XdgTopLevel => shell::ShellType::XdgTopLevel,
-                    exwlshellev::WlShellType::InputPanel => shell::ShellType::InputPanel,
-                    exwlshellev::WlShellType::SessionLock => shell::ShellType::SessionLock,
-                };
-                let info = shell::ShellInfo {
-                    window: iced_id,
-                    shell: shell_type,
-                };
-                self.shell_broadcast.send(shell::ShellEvent::NewShell(info));
-                if let Some(output) = ev
-                    .get_unit_with_id(unit_id)
-                    .and_then(|unit| unit.get_wloutput().cloned())
-                    && let Some(inner) = ev.get_output_info_of(&output)
-                {
-                    self.shell_broadcast
-                        .send(shell::ShellEvent::WindowOutputChanged {
-                            window: iced_id,
-                            output: Some(inner),
-                        });
-                }
-                if let Some(message) = self.on_new_shell.as_ref().and_then(|f| f(info)) {
-                    ev.request_refresh_all(RefreshRequest::NextFrame);
-                    let (caches, application) = self.user_interfaces.extract_all();
-                    update(
-                        application,
-                        &mut self.runtime,
-                        &mut vec![message],
-                        &mut self.waiting_layer_shell_actions,
-                    );
-                    for (_, window) in self.window_manager.iter_mut() {
-                        window.state.synchronize(application);
-                    }
-                    iced_debug::theme_changed(|| {
-                        self.window_manager
-                            .first()
-                            .and_then(|window| theme::Base::palette(window.state.theme()))
-                    });
-                    for (iced_id, cache) in caches {
-                        let Some(window) = self.window_manager.get_mut(iced_id) else {
-                            continue;
-                        };
-                        self.user_interfaces.build(
-                            iced_id,
-                            cache,
-                            &mut window.renderer,
-                            window.state.viewport().logical_size(),
-                        );
-                    }
-                }
-
-                let is_first = self.window_manager.is_empty();
-
-                let window = self.window_manager.insert(
-                    iced_id,
-                    (width, height),
-                    scale_float,
-                    wrapper,
-                    self.user_interfaces.application(),
-                    self.compositor
-                        .as_mut()
-                        .expect("It should have been created"),
-                    self.system_theme,
-                );
-
-                iced_debug::theme_changed(|| {
-                    if is_first {
-                        theme::Base::palette(window.state.theme())
-                    } else {
-                        None
-                    }
-                });
-
-                let theme = window.state.theme().mode();
-                if self.system_theme != theme {
-                    self.runtime
-                        .broadcast(iced_futures::subscription::Event::SystemThemeChanged(theme));
-                }
-
-                self.user_interfaces.build(
-                    iced_id,
-                    user_interface::Cache::default(),
-                    &mut window.renderer,
-                    window.state.viewport().logical_size(),
-                );
-
-                events.push(IcedEvent::Window(IcedWindowEvent::Opened {
-                    position: None,
-                    size: window.state.window_size_f32(),
-                }));
-                (iced_id, window)
+                layout_span.finish();
+                events.push(IcedEvent::Window(IcedWindowEvent::Resized(
+                    window.state.window_size_f32(),
+                )));
+            }
+            (iced_id, window)
+        } else {
+            let wrapper = ex_wlshell_window.gen_wrapper();
+            let iced_id = ex_wlshell_window
+                .get_binding()
+                .copied()
+                .unwrap_or_else(IcedId::unique);
+            let shell_type = match ex_wlshell_window.wl_shell_type() {
+                exwlshellev::WlShellType::LayerShell => shell::ShellType::LayerShell,
+                exwlshellev::WlShellType::PopUp => shell::ShellType::PopUp,
+                exwlshellev::WlShellType::XdgTopLevel => shell::ShellType::XdgTopLevel,
+                exwlshellev::WlShellType::InputPanel => shell::ShellType::InputPanel,
+                exwlshellev::WlShellType::SessionLock => shell::ShellType::SessionLock,
             };
+            let info = shell::ShellInfo {
+                window: iced_id,
+                shell: shell_type,
+            };
+            self.shell_broadcast.send(shell::ShellEvent::NewShell(info));
+            if let Some(output) = ev
+                .get_unit_with_id(unit_id)
+                .and_then(|unit| unit.get_wloutput().cloned())
+                && let Some(inner) = ev.get_output_info_of(&output)
+            {
+                self.shell_broadcast
+                    .send(shell::ShellEvent::WindowOutputChanged {
+                        window: iced_id,
+                        output: Some(inner),
+                    });
+            }
+            if let Some(message) = self.on_new_shell.as_ref().and_then(|f| f(info)) {
+                ev.request_refresh_all(RefreshRequest::NextFrame);
+                let (caches, application) = self.user_interfaces.extract_all();
+                update(
+                    application,
+                    &mut self.runtime,
+                    &mut vec![message],
+                    &mut self.waiting_layer_shell_actions,
+                );
+                for (_, window) in self.window_manager.iter_mut() {
+                    window.state.synchronize(application);
+                    iced_core::Renderer::hint(
+                        &mut window.renderer,
+                        window.state.viewport().scale(),
+                    );
+                }
+                iced_debug::theme_changed(|| {
+                    self.window_manager
+                        .first()
+                        .and_then(|window| theme::Base::seed(window.state.theme()))
+                });
+                for (iced_id, cache) in caches {
+                    let Some(window) = self.window_manager.get_mut(iced_id) else {
+                        continue;
+                    };
+                    self.user_interfaces.build(
+                        iced_id,
+                        cache,
+                        &mut window.renderer,
+                        window.state.viewport().logical_size(),
+                    );
+                }
+            }
+
+            let is_first = self.window_manager.is_empty();
+
+            let window = self.window_manager.insert(
+                iced_id,
+                (width, height),
+                scale_float,
+                wrapper,
+                self.user_interfaces.application(),
+                self.compositor
+                    .as_mut()
+                    .expect("It should have been created"),
+                self.renderer_settings,
+                self.proxy.clone(),
+                self.system_theme,
+            );
+
+            iced_debug::theme_changed(|| {
+                if is_first {
+                    theme::Base::seed(window.state.theme())
+                } else {
+                    None
+                }
+            });
+
+            let theme = window.state.theme().mode();
+            if self.system_theme != theme {
+                self.runtime
+                    .broadcast(iced_futures::subscription::Event::SystemThemeChanged(theme));
+            }
+
+            self.user_interfaces.build(
+                iced_id,
+                user_interface::Cache::default(),
+                &mut window.renderer,
+                window.state.viewport().logical_size(),
+            );
+
+            events.push(IcedEvent::Window(IcedWindowEvent::Opened {
+                position: None,
+                size: window.state.window_size_f32(),
+                scale_factor: window.state.wayland_scale_factor() as f32,
+            }));
+            (iced_id, window)
+        };
 
         let compositor = self
             .compositor
@@ -595,10 +623,11 @@ where
 
         let draw_span = iced_debug::draw(iced_id);
         let (ui_state, statuses) = ui.update(
+            &*window.raw,
+            &window.waker,
             &events,
             cursor,
             &mut window.renderer,
-            &mut self.clipboard,
             &mut self.messages,
         );
 
@@ -649,7 +678,15 @@ where
         // get layer_shell_id so that layer_shell_window can be drop, and ev can be borrow mut
         let layer_shell_id = unit_id;
 
-        Self::handle_ui_state(ev, window, ui_state, false, true);
+        Self::handle_ui_state(
+            ev,
+            window,
+            ui_state,
+            false,
+            true,
+            &mut self.clipboard,
+            &self.proxy,
+        );
 
         window.draw_preedit();
 
@@ -696,6 +733,7 @@ where
                     PresentRecovery::Report => {
                         tracing::error!("Error {error:?} when presenting surface.");
                     }
+                    PresentRecovery::Ignore => {}
                 }
             }
         }
@@ -787,9 +825,16 @@ where
         // In previous implementation, event without layer_shell_id won't call `update` here, but
         // will broadcast to the application. I'm not sure why, but I think it is
         // reasonable to call `update` here.
+        let previous_scale = window.state.viewport().scale();
         window
             .state
             .update(&event, self.user_interfaces.application());
+        if window.state.viewport().scale() != previous_scale {
+            iced_core::Renderer::hint(&mut window.renderer, window.state.viewport().scale());
+            if let Some(ui) = self.user_interfaces.ui_mut(&iced_id) {
+                ui.relayout(window.state.viewport().logical_size(), &mut window.renderer);
+            }
+        }
         if let Some(event) = conversion::window_event(
             &event,
             window.state.application_scale_factor(),
@@ -812,6 +857,11 @@ where
             &mut self.window_manager,
             &mut self.system_theme,
             &mut self.runtime,
+            &self.proxy,
+            &mut self.backend_settings,
+            &mut self.renderer_settings,
+            &self.fonts,
+            &mut self.iced_events,
             ev,
         );
         if should_exit {
@@ -1096,10 +1146,11 @@ where
                 .ui_mut(&iced_id)
                 .expect("Get user interface")
                 .update(
+                    &*window.raw,
+                    &window.waker,
                     &window_events,
                     window.state.cursor(),
                     &mut window.renderer,
-                    &mut self.clipboard,
                     &mut self.messages,
                 );
 
@@ -1107,7 +1158,15 @@ where
             let unconditional_rendering = true;
             #[cfg(not(feature = "unconditional-rendering"))]
             let unconditional_rendering = false;
-            if Self::handle_ui_state(ev, window, ui_state, unconditional_rendering, false) {
+            if Self::handle_ui_state(
+                ev,
+                window,
+                ui_state,
+                unconditional_rendering,
+                false,
+                &mut self.clipboard,
+                &self.proxy,
+            ) {
                 rebuilds.push((iced_id, window));
             }
 
@@ -1153,11 +1212,12 @@ where
 
             for (_, window) in self.window_manager.iter_mut() {
                 window.state.synchronize(application);
+                iced_core::Renderer::hint(&mut window.renderer, window.state.viewport().scale());
             }
             iced_debug::theme_changed(|| {
                 self.window_manager
                     .first()
-                    .and_then(|window| theme::Base::palette(window.state.theme()))
+                    .and_then(|window| theme::Base::seed(window.state.theme()))
             });
 
             for (iced_id, cache) in caches {
@@ -1191,6 +1251,8 @@ where
         ui_state: user_interface::State,
         unconditional_rendering: bool,
         update_ime: bool,
+        clipboard: &mut ExwlShellClipboard,
+        proxy: &IcedProxy<Action<P::Message>>,
     ) -> bool {
         match ui_state {
             user_interface::State::Outdated => true,
@@ -1198,6 +1260,7 @@ where
                 redraw_request,
                 input_method,
                 mouse_interaction,
+                clipboard: requests,
                 ..
             } => {
                 if unconditional_rendering {
@@ -1258,9 +1321,34 @@ where
                     }
                     window.mouse_interaction = mouse_interaction;
                 }
+                run_clipboard(clipboard, requests, window.iced_id, proxy);
                 false
             }
         }
+    }
+}
+
+fn run_clipboard<Message: 'static>(
+    clipboard: &mut ExwlShellClipboard,
+    requests: iced_core::Clipboard,
+    window: IcedId,
+    proxy: &IcedProxy<Action<Message>>,
+) {
+    use iced_core::clipboard;
+    use std::sync::Arc;
+
+    for kind in requests.reads {
+        proxy.send_action(Action::Event {
+            window,
+            event: IcedEvent::Clipboard(clipboard::Event::Read(clipboard.read(kind).map(Arc::new))),
+        });
+    }
+
+    if let Some(content) = requests.write {
+        proxy.send_action(Action::Event {
+            window,
+            event: IcedEvent::Clipboard(clipboard::Event::Written(clipboard.write(content))),
+        });
     }
 }
 
@@ -1313,6 +1401,11 @@ pub(crate) fn run_action<P, C, E: Executor>(
     window_manager: &mut WindowManager<P, C>,
     system_theme: &mut iced_core::theme::Mode,
     runtime: &mut MultiRuntime<E, P::Message>,
+    proxy: &IcedProxy<Action<P::Message>>,
+    backend_settings: &mut iced_core::backend::Settings,
+    renderer_settings: &mut iced_core::renderer::Settings,
+    fonts: &[Cow<'static, [u8]>],
+    iced_events: &mut Vec<(IcedId, IcedEvent)>,
     ev: &mut WindowState<IcedId>,
 ) where
     P: IcedProgram + 'static,
@@ -1322,7 +1415,7 @@ pub(crate) fn run_action<P, C, E: Executor>(
 {
     use iced_core::widget::operation;
     use iced_runtime::Action;
-    use iced_runtime::clipboard;
+    use iced_runtime::{backend, clipboard, font};
 
     use iced_runtime::window::Action as WindowAction;
     match event {
@@ -1348,11 +1441,11 @@ pub(crate) fn run_action<P, C, E: Executor>(
             }
         },
         Action::Clipboard(action) => match action {
-            clipboard::Action::Read { target, channel } => {
-                let _ = channel.send(clipboard.read(target));
+            clipboard::Action::Read { kind, channel } => {
+                let _ = channel.send(clipboard.read(kind));
             }
-            clipboard::Action::Write { target, contents } => {
-                clipboard.write(target, contents);
+            clipboard::Action::Write { content, channel } => {
+                let _ = channel.send(clipboard.write(content));
             }
         },
         Action::Widget(action) => {
@@ -1375,6 +1468,7 @@ pub(crate) fn run_action<P, C, E: Executor>(
                     }
                 }
             }
+            ev.request_refresh_all(RefreshRequest::NextFrame);
         }
         Action::Window(action) => match action {
             WindowAction::Close(id) => {
@@ -1441,16 +1535,89 @@ pub(crate) fn run_action<P, C, E: Executor>(
 
             _ => {}
         },
+        Action::Font(action) => match action {
+            font::Action::Load { bytes, channel } => {
+                if let Some(compositor) = compositor {
+                    let _ = channel.send(compositor.load_font(bytes));
+                }
+            }
+            font::Action::List { channel } => {
+                if let Some(compositor) = compositor {
+                    let _ = channel.send(compositor.list_fonts());
+                }
+            }
+            font::Action::SetDefaults { font, text_size } => {
+                renderer_settings.default_font = font;
+                renderer_settings.default_text_size = text_size;
+
+                if let Some(compositor) = compositor {
+                    for (id, window) in window_manager.iter_mut() {
+                        window.renderer = compositor.create_renderer(*renderer_settings);
+                        iced_core::Renderer::hint(
+                            &mut window.renderer,
+                            window.state.viewport().scale(),
+                        );
+
+                        if let Some(ui) = user_interfaces.ui_mut(&id) {
+                            ui.relayout(
+                                window.state.viewport().logical_size(),
+                                &mut window.renderer,
+                            );
+                        }
+                    }
+                    ev.request_refresh_all(RefreshRequest::NextFrame);
+                }
+            }
+        },
+        Action::Backend(backend::Action::Configure(settings, channel)) => {
+            let Some(window) = window_manager.first() else {
+                return;
+            };
+            let compatible_window = window.raw.clone();
+            let shell = Shell::new(proxy.clone());
+            let result = runtime.block_on(C::new(
+                settings.clone(),
+                ev.display_wrapper(),
+                compatible_window,
+                shell,
+            ));
+            let mut new_compositor = match result {
+                Ok(compositor) => compositor,
+                Err(error) => {
+                    let _ = channel.send(Err(error));
+                    return;
+                }
+            };
+
+            for font in fonts {
+                let _ = new_compositor.load_font(font.clone());
+            }
+            iced_graphics::cache::invalidate_all();
+            window_manager.replace_with(|mut window| {
+                let size = window.state.viewport().physical_size();
+                // Release native presentation resources before creating replacements.
+                drop(window.renderer);
+                drop(window.surface);
+                window.renderer = new_compositor.create_renderer(*renderer_settings);
+                iced_core::Renderer::hint(&mut window.renderer, window.state.viewport().scale());
+                window.surface =
+                    new_compositor.create_surface(window.raw.clone(), size.width, size.height);
+                window
+            });
+            *backend_settings = settings;
+            *compositor = Some(new_compositor);
+            ev.request_refresh_all(RefreshRequest::NextFrame);
+            let _ = channel.send(Ok(()));
+        }
+        Action::Event { window, event } => iced_events.push((window, event)),
+        Action::Tick => {
+            use iced_core::Renderer as _;
+            for (_, window) in window_manager.iter_mut() {
+                window.renderer.tick();
+            }
+        }
         Action::Exit => {
             *should_exit = true;
-        }
-        Action::LoadFont { bytes, channel } => {
-            if let Some(compositor) = compositor {
-                // TODO: Error handling (?)
-                compositor.load_font(bytes.clone());
-
-                let _ = channel.send(Ok(()));
-            }
         }
         Action::Reload => {
             for (iced_id, window) in window_manager.iter_mut() {

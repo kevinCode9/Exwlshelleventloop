@@ -4,7 +4,6 @@ use iced::Length;
 use iced::Rectangle;
 use iced::Shadow;
 use iced::Size;
-use iced::advanced::Clipboard;
 use iced::advanced::Layout;
 use iced::advanced::Shell;
 use iced::advanced::Widget;
@@ -152,7 +151,6 @@ where
         layout: Layout<'_>,
         _cursor: Cursor,
         _renderer: &Renderer,
-        _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         _viewport: &Rectangle,
     ) {

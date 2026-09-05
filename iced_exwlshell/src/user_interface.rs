@@ -1,5 +1,5 @@
-use iced_core::{Clipboard, renderer::Style, widget::Operation};
 use iced_core::{Event, Size, event::Status, mouse::Cursor, window::Id};
+use iced_core::{renderer::Style, widget::Operation};
 use iced_program::{Instance, Program};
 use iced_runtime::{
     UserInterface as IcedUserInterface,
@@ -58,14 +58,17 @@ where
 
     pub fn update(
         &mut self,
+        window: &dyn iced_core::window::Window,
+        waker: &iced_core::shell::Waker,
         events: &[Event],
         cursor: Cursor,
         renderer: &mut Renderer,
-        clipboard: &mut dyn Clipboard,
         messages: &mut Vec<Message>,
     ) -> (State, Vec<Status>) {
         let mut ui = self.take();
-        let res = ui.update(events, cursor, renderer, clipboard, messages);
+        let mut bus = iced_core::shell::Bus::new();
+        let res = ui.update(window, waker, events, cursor, renderer, &mut bus);
+        messages.extend(bus);
         self.ui = Some(ui);
         res
     }

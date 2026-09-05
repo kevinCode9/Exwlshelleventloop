@@ -71,6 +71,8 @@ where
                 align_y: alignment::Vertical::Top,
                 shaping: text::Shaping::Advanced,
                 wrapping: text::Wrapping::None,
+                ellipsis: text::Ellipsis::None,
+                hint_factor: renderer.hint_factor(),
             });
 
             self.spans.clear();

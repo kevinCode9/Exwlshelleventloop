@@ -14,7 +14,7 @@ pub enum Error {
 
     /// The application graphics context could not be created.
     #[error("the application graphics context could not be created")]
-    GraphicsCreationFailed(iced_graphics::Error),
+    GraphicsCreationFailed(iced_core::backend::Error),
 
     #[error("Error during dispatch")]
     WaylandDispatchFailed(#[from] ExShellEventError),
@@ -23,8 +23,8 @@ pub enum Error {
     InvalidSettings(&'static str),
 }
 
-impl From<iced_graphics::Error> for Error {
-    fn from(error: iced_graphics::Error) -> Error {
+impl From<iced_core::backend::Error> for Error {
+    fn from(error: iced_core::backend::Error) -> Error {
         Error::GraphicsCreationFailed(error)
     }
 }
