@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.20.0] - 2026-08-29
 ### Migration
-Current update is hudge, so [Migration Guide is provided](https://github.com/waycrate/exwlshelleventloop/docs/MIGRATION-19.1->20.0.md)
+Current update is hudge, so [Migration Guide is provided](https://github.com/waycrate/exwlshelleventloop/docs/MIGRATION-19.1-to-20.0.md)
 
 ### Changed (breaking)
 - Feat: add configurable redraw policy to iced_exwlshell (#421)
