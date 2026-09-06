@@ -905,9 +905,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-deque"
-version = "0.8.7"
+version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5181e0de7b61eb03a81e347d6dd8797bae9da5146707b51077e2d71a54ec0ceb"
+checksum = "622f3fc73690be383c7214310406f28a90e6edeadc3cea882f9d71e495b9711a"
 dependencies = [
  "crossbeam-epoch",
  "crossbeam-utils",
@@ -915,18 +915,18 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-epoch"
-version = "0.9.20"
+version = "0.9.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d6914041f254d6e9176c01941b21115dcfb7089e55135a35411081bd106ef3f"
+checksum = "dc74980687109a3b14c72fd458107bf0baa1da1a1a805e178d15501ba9b86d9d"
 dependencies = [
  "crossbeam-utils",
 ]
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.22"
+version = "0.8.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61803da095bee82a81bb1a452ecc25d3b2f1416d1897eb86430c6159ef717c17"
+checksum = "a31eee39dddec8330830986fcd7625edb5a24ec90ea038215273bbc3adb08ac6"
 
 [[package]]
 name = "crunchy"
@@ -1787,7 +1787,7 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 [[package]]
 name = "iced"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1804,7 +1804,7 @@ dependencies = [
 [[package]]
 name = "iced_beacon"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "bincode",
  "futures",
@@ -1819,7 +1819,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "bitflags 2.13.1",
  "bytes",
@@ -1839,7 +1839,7 @@ dependencies = [
 [[package]]
 name = "iced_debug"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "iced_beacon",
  "iced_core",
@@ -1850,7 +1850,7 @@ dependencies = [
 [[package]]
 name = "iced_devtools"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "iced_debug",
  "iced_program",
@@ -1912,7 +1912,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "futures",
  "iced_core",
@@ -1926,7 +1926,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "bitflags 2.13.1",
  "bytemuck",
@@ -1946,7 +1946,7 @@ dependencies = [
 [[package]]
 name = "iced_program"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "iced_graphics",
  "iced_runtime",
@@ -1955,7 +1955,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -1967,7 +1967,7 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "bytes",
  "iced_core",
@@ -1978,7 +1978,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -2020,7 +2020,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "bitflags 2.13.1",
  "bytemuck",
@@ -2040,7 +2040,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "iced_renderer",
  "iced_runtime",
@@ -2054,7 +2054,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.15.0-dev"
-source = "git+https://github.com/acul009/iced.git#a0e139422b67e15786163edb3655cd5affbe8145"
+source = "git+https://github.com/acul009/iced.git#af07a61a15a09f620d5d3ff2df1ff05cbd4d92fb"
 dependencies = [
  "arboard",
  "iced_debug",
@@ -2229,9 +2229,9 @@ checksum = "6e44b0a4eaa4c82f441d50a963f2d5f05a787240aeee097597033e72accfd22f"
 
 [[package]]
 name = "indexmap"
-version = "2.14.1"
+version = "2.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07aa2048142242915a31d35844fb311e0e53fcca590c3a0a40dcf1b841fa09eb"
+checksum = "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
@@ -2454,7 +2454,7 @@ dependencies = [
  "bitflags 2.13.1",
  "libc",
  "plain",
- "redox_syscall 0.9.3",
+ "redox_syscall 0.9.4",
 ]
 
 [[package]]
@@ -2600,9 +2600,9 @@ dependencies = [
 
 [[package]]
 name = "lyon_tessellation"
-version = "1.0.21"
+version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dabea159dc6eea9171a541b458134b70ca95e3162d068132b2b3b9bc01aad06e"
+checksum = "43b8dcf906637ecef61b3c0740c7a4e7f27caeb31257cfac0cc579ce15be6005"
 dependencies = [
  "float_next_after",
  "lyon_path",
@@ -3947,9 +3947,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d678d17679829e73d371e96880897e98fee2ded7acc0a50bdf8af2affa4b2fe5"
+checksum = "737970939a87c6fa31e7acad13307bccbb017a073b695b6089a2c484f929e20e"
 dependencies = [
  "bitflags 2.13.1",
 ]
