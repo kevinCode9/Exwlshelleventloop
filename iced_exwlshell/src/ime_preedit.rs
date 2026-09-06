@@ -1,5 +1,6 @@
 use iced_core::{
-    Color, Padding, Point, Rectangle, Size, Text, Vector, alignment, input_method, renderer, text,
+    Color, Font, Padding, Point, Rectangle, Size, Text, Vector, alignment, input_method, renderer,
+    text,
 };
 
 use enumflags2::bitflags;
@@ -10,7 +11,7 @@ where
 {
     position: Point,
     content: Renderer::Paragraph,
-    spans: Vec<text::Span<'static, (), Renderer::Font>>,
+    spans: Vec<text::Span<'static, ()>>,
 }
 
 #[bitflags]
@@ -64,9 +65,9 @@ where
             self.content = Renderer::Paragraph::with_spans(Text {
                 content: &spans,
                 bounds: Size::INFINITE,
-                size: preedit.text_size.unwrap_or_else(|| renderer.default_size()),
+                size: preedit.text_size.unwrap_or_else(|| renderer.text_size()),
                 line_height: text::LineHeight::default(),
-                font: renderer.default_font(),
+                font: Font::DEFAULT,
                 align_x: text::Alignment::Default,
                 align_y: alignment::Vertical::Top,
                 shaping: text::Shaping::Advanced,

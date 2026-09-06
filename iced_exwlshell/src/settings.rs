@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fs::File};
 
-use iced_core::{Font, Pixels};
+use iced_core::Pixels;
 use iced_wayland_subscriber::shell;
 
 use crate::reexport::{Anchor, KeyboardInteractivity, Layer, WithConnection};
@@ -32,15 +32,10 @@ pub struct Settings {
     /// The fonts to load on boot.
     pub fonts: Vec<Cow<'static, [u8]>>,
 
-    /// The default [`Font`] to be used.
-    ///
-    /// By default, it uses [`Family::SansSerif`](iced::font::Family::SansSerif).
-    pub default_font: Font,
-
     /// The text size that will be used by default.
     ///
     /// The default value is `16.0`.
-    pub default_text_size: Pixels,
+    pub text_size: Pixels,
 
     /// If set to true, the renderer will try to perform antialiasing for some
     /// primitives.
@@ -74,8 +69,7 @@ impl Default for Settings {
             id: None,
             fonts: Vec::new(),
             layer_settings: LayerShellSettings::default(),
-            default_font: Font::default(),
-            default_text_size: Pixels(16.0),
+            text_size: Pixels(16.0),
             antialiasing: false,
             virtual_keyboard_support: None,
             with_connection: None,
@@ -124,8 +118,7 @@ mod tests {
 
         assert!(settings.id.is_none());
         assert!(settings.fonts.is_empty());
-        assert_eq!(settings.default_font, Font::default());
-        assert_eq!(settings.default_text_size, Pixels(16.0));
+        assert_eq!(settings.text_size, Pixels(16.0));
         assert!(!settings.antialiasing);
         assert!(settings.virtual_keyboard_support.is_none());
 

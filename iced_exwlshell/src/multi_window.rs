@@ -98,8 +98,7 @@ where
         ..Default::default()
     };
     let renderer_settings = iced_core::renderer::Settings {
-        default_font: settings.default_font,
-        default_text_size: settings.default_text_size,
+        text_size: settings.text_size,
         ..Default::default()
     };
     let (message_sender, message_receiver) = channel::<Action<P::Message>>();
@@ -1547,8 +1546,8 @@ pub(crate) fn run_action<P, C, E: Executor>(
                 }
             }
             font::Action::SetDefaults { font, text_size } => {
-                renderer_settings.default_font = font;
-                renderer_settings.default_text_size = text_size;
+                renderer_settings.font = font;
+                renderer_settings.text_size = text_size;
 
                 if let Some(compositor) = compositor {
                     for (id, window) in window_manager.iter_mut() {

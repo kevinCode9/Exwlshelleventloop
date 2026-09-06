@@ -11,7 +11,6 @@ mod pattern {
     use std::borrow::Cow;
 
     use iced_core::Element;
-    use iced_core::Font;
     use iced_runtime::Task;
 
     use crate::actions::ExwlShellCustomActionWithId;
@@ -422,17 +421,6 @@ mod pattern {
             }
         }
 
-        /// Sets the default [`Font`] of the [`SingleApplication`].
-        pub fn default_font(self, default_font: Font) -> Self {
-            Self {
-                settings: Settings {
-                    default_font,
-                    ..self.settings
-                },
-                ..self
-            }
-        }
-
         /// Sets the layershell setting of the [`SingleApplication`]
         pub fn layer_settings(self, layer_settings: LayerShellSettings) -> Self {
             Self {
@@ -457,7 +445,7 @@ mod pattern {
         ) -> Self {
             Self {
                 settings: Settings {
-                    default_text_size: default_text_size.into(),
+                    text_size: default_text_size.into(),
                     ..self.settings
                 },
                 ..self

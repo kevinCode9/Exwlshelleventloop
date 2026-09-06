@@ -7,7 +7,6 @@ mod pattern {
 
     use exwlshellev::StartMode;
     use iced_core::Element;
-    use iced_core::Font;
     use iced_runtime::Task;
 
     use crate::actions::ExwlShellCustomActionWithId;
@@ -427,17 +426,6 @@ mod pattern {
             }
         }
 
-        /// Sets the default [`Font`] of the [`SingleApplication`].
-        pub fn default_font(self, default_font: Font) -> Self {
-            Self {
-                settings: Settings {
-                    default_font,
-                    ..self.settings
-                },
-                ..self
-            }
-        }
-
         /// Adds a font to the list of fonts that will be loaded at the start of the [`SingleApplication`].
         pub fn font(mut self, font: impl Into<Cow<'static, [u8]>>) -> Self {
             self.settings.fonts.push(font.into());
@@ -451,7 +439,7 @@ mod pattern {
         ) -> Self {
             Self {
                 settings: Settings {
-                    default_text_size: default_text_size.into(),
+                    text_size: default_text_size.into(),
                     ..self.settings
                 },
                 ..self

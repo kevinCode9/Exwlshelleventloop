@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 
 use iced_core::Element;
-use iced_core::Font;
 use iced_runtime::Task;
 
 use crate::actions::ExwlShellCustomActionWithId;
@@ -687,12 +686,12 @@ impl<P: Program> Daemon<P> {
             (
                 super::attach(self.raw),
                 hook,
-                redraw_policy.for_wrapped_messages(
-                    |event: &iced_exdevtools::Event<P>| match event {
+                redraw_policy.for_wrapped_messages(|event: &iced_exdevtools::Event<P::Message>| {
+                    match event {
                         iced_exdevtools::Event::Program(message) => Some(message),
                         _ => None,
-                    },
-                ),
+                    }
+                }),
             )
         };
 
@@ -723,17 +722,6 @@ impl<P: Program> Daemon<P> {
         }
     }
 
-    /// Sets the default [`Font`] of the [`Daemon`].
-    pub fn default_font(self, default_font: Font) -> Self {
-        Self {
-            settings: Settings {
-                default_font,
-                ..self.settings
-            },
-            ..self
-        }
-    }
-
     /// Sets the layershell setting of the [`Daemon`]
     pub fn layer_settings(self, layer_settings: LayerShellSettings) -> Self {
         Self {
@@ -758,7 +746,7 @@ impl<P: Program> Daemon<P> {
     ) -> Self {
         Self {
             settings: Settings {
-                default_text_size: default_text_size.into(),
+                text_size: default_text_size.into(),
                 ..self.settings
             },
             ..self

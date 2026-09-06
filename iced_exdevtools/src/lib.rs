@@ -23,9 +23,9 @@ macro_rules! gen_attach {
     (
         Action = $Action:ident
     ) => {
-        impl<P: $crate::Program> TryInto<$Action> for $crate::Event<P>
+        impl<Message> TryInto<$Action> for $crate::Event<Message>
         where
-            P::Message: $crate::MaybeDebug + 'static + TryInto<$Action, Error = P::Message>,
+            Message: $crate::MaybeDebug + 'static + TryInto<$Action, Error = Message>,
         {
             type Error = Self;
             fn try_into(self) -> std::result::Result<$Action, Self::Error> {
@@ -33,7 +33,7 @@ macro_rules! gen_attach {
                     return Err(self);
                 };
 
-                let message: std::result::Result<$Action, P::Message> = message.try_into();
+                let message: std::result::Result<$Action, Message> = message.try_into();
 
                 match message {
                     Ok(action) => Ok(action),
@@ -41,7 +41,7 @@ macro_rules! gen_attach {
                 }
             }
         }
-        fn attach<P>(program: P) -> impl $crate::Program<Message = $crate::Event<P>>
+        fn attach<P>(program: P) -> impl $crate::Program<Message = $crate::Event<P::Message>>
         where
             P: $crate::Program + 'static,
             P::Message: $crate::MaybeDebug
@@ -49,7 +49,8 @@ macro_rules! gen_attach {
                 + Send
                 + 'static
                 + TryInto<$Action, Error = P::Message>,
-            $crate::Event<P>: TryInto<$Action, Error = $crate::Event<P>> + Send + 'static,
+            $crate::Event<P::Message>:
+                TryInto<$Action, Error = $crate::Event<P::Message>> + Send + 'static,
         {
             struct Attach<P> {
                 program: P,
@@ -61,7 +62,7 @@ macro_rules! gen_attach {
                 P::Message: $crate::MaybeDebug + $crate::MaybeClone,
             {
                 type State = $crate::DevTools<P>;
-                type Message = $crate::Event<P>;
+                type Message = $crate::Event<P::Message>;
                 type Theme = P::Theme;
                 type Renderer = P::Renderer;
                 type Executor = P::Executor;
